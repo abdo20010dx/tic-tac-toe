@@ -1,0 +1,22 @@
+{
+  "name": "server-side",
+  "version": "1.0.0",
+  "description": "server side of game",
+  "main": "app.js",
+  "scripts": {
+    "test": "node app"
+  },
+  "keywords": [
+    "x",
+    "o",
+    "tica",
+    "tac",
+    "toe"
+  ],
+  "author": "abdo gomaa",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^4.1.3"
+  }
+}
