@@ -1,4 +1,3 @@
-const mongoose  = require('mongoose')
 
 
 
@@ -10,14 +9,25 @@ exports.findGame=(IO)=>{
 
         // player create new game
         socket.on('createGame',userInfo=>{
+
+
+
             IO.queue = userInfo
-            socket.join(userInfo.id)
+            console.log(IO.queue)
+            socket.join(IO.queue.id)
+            IO.to(IO.queue.id).emit('gameCreated')
         })
 
 
         }else if(IO.queue != ""){
+            //player two join game
+            socket.on('joinGame',joinerInfo=>{
+
             socket.join(IO.queue.id)
-            
+            IO.to(IO.queue.id).emit('startGame',IO.queue,joinerInfo)
+
+            IO.queue = ""
+            })
         }
 
 

@@ -1,9 +1,30 @@
 const app=require('express')()
 const server=require('http').createServer(app)
-const Io=require('socket.io')(server)
+const Io=require('socket.io')(server,{
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  })
 const {findGame}=require('./server-sockets/game')
 
-const homeRouter=require('./routes/home.route')
+
+// app.use(function (req, res, next) {
+
+//     // Website you wish to allow to connect
+//     res.setHeader('Access-Control-Allow-Origin', '*');
+//     res.setHeader('Access-Control-Expose-Headers', '*');
+
+//     // Request methods you wish to allow
+//     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+
+//     next();
+// });
+
+
+
+// const cors=require('cors')
+// app.use(cors())
 
 
 // app.use('/home',homeRouter)
@@ -13,9 +34,6 @@ Io.queue=[]
 
 findGame(Io)
 
-Io.on('connection',socket=>{
-    room.ji
-})
 
 
 
