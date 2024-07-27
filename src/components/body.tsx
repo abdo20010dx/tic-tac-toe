@@ -3,6 +3,8 @@ import { Box, Button, Grid, MenuItem, Select, Typography, Avatar } from '@mui/ma
 
 const TicTacToe = () => {
     const [size, setSize] = useState(3);
+    const [playerOneSize, setPlayerOneSize] = useState(3);
+    const [playerTwoSize, setPlayerTwoSize] = useState(3);
     const [gameState, setGameState] = useState(Array(3 * 3).fill(null));
     const [isXTurn, setIsXTurn] = useState(true);
     const [winner, setWinner] = useState(null);
@@ -10,20 +12,32 @@ const TicTacToe = () => {
     const [playerOneSymbol, setPlayerOneSymbol] = useState('X');
     const [playerTwoSymbol, setPlayerTwoSymbol] = useState('O');
     const [isPlayerOneFirst, setIsPlayerOneFirst] = useState(true);
+    const [message, setMessage] = useState('');
 
-    const handleSizeChange = (event: any) => {
+    const handleSizeChange = (player: string, event: any) => {
         const newSize = event.target.value;
-        setSize(newSize);
-        resetGame(newSize);
+        if (player === 'one') {
+            setPlayerOneSize(newSize);
+            setMessage(`Player One asking to change game size to ${newSize}`);
+        } else {
+            setPlayerTwoSize(newSize);
+            setMessage(`Player Two asking to change game size to ${newSize}`);
+        }
     };
 
-    const resetGame = (newSize = size) => {
-        setGameState(Array(newSize * newSize).fill(null));
-        setWinner(null);
-        setWinningLine(null);
-        setIsPlayerOneFirst((prev) => !prev);
-        setIsXTurn(!isPlayerOneFirst);
-        toggleSymbols();
+    const resetGame = () => {
+        if (playerOneSize === playerTwoSize) {
+            setSize(playerOneSize);
+            setGameState(Array(playerOneSize * playerOneSize).fill(null));
+            setWinner(null);
+            setWinningLine(null);
+            setIsPlayerOneFirst((prev) => !prev);
+            setIsXTurn(!isPlayerOneFirst);
+            toggleSymbols();
+            setMessage('');
+        } else {
+            setMessage('Both players must select the same size to start the game.');
+        }
     };
 
     const toggleSymbols = () => {
@@ -32,6 +46,11 @@ const TicTacToe = () => {
     };
 
     const handleButtonClick = (index: number) => {
+        if (playerOneSize !== playerTwoSize) {
+            setMessage('Both players must select the same size to start the game.');
+            return;
+        }
+
         if (gameState[index] === null && !winner) {
             const newState = [...gameState];
             newState[index] = isXTurn ? playerOneSymbol : playerTwoSymbol;
@@ -178,6 +197,11 @@ const TicTacToe = () => {
                     <Box>
                         <Typography variant="body1">Player One</Typography>
                         <Typography variant="h6">{playerOneSymbol}</Typography>
+                        <Select value={playerOneSize} onChange={(event) => handleSizeChange('one', event)} disabled={!!winner || gameState.some(cell => cell !== null)}>
+                            <MenuItem value={3}>3 x 3</MenuItem>
+                            <MenuItem value={5}>5 x 5</MenuItem>
+                            <MenuItem value={7}>7 x 7</MenuItem>
+                        </Select>
                     </Box>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -185,16 +209,23 @@ const TicTacToe = () => {
                     <Box>
                         <Typography variant="body1">Player Two</Typography>
                         <Typography variant="h6">{playerTwoSymbol}</Typography>
+                        <Select value={playerTwoSize} onChange={(event) => handleSizeChange('two', event)} disabled={!!winner || gameState.some(cell => cell !== null)}>
+                            <MenuItem value={3}>3 x 3</MenuItem>
+                            <MenuItem value={5}>5 x 5</MenuItem>
+                            <MenuItem value={7}>7 x 7</MenuItem>
+                        </Select>
                     </Box>
                 </Box>
             </Box>
+            {message && (
+                <Typography variant="body1" sx={{ marginBottom: '20px', color: 'red' }}>
+                    {message}
+                </Typography>
+            )}
             <Box sx={{ marginBottom: '20px' }}>
-                <Typography variant="h6" sx={{ marginBottom: '10px' }}>Select Grid Size:</Typography>
-                <Select value={size} onChange={handleSizeChange}>
-                    <MenuItem value={3}>3 x 3</MenuItem>
-                    <MenuItem value={5}>5 x 5</MenuItem>
-                    <MenuItem value={7}>7 x 7</MenuItem>
-                </Select>
+                <Button variant="contained" onClick={resetGame} disabled={!!winner || playerOneSize !== playerTwoSize || gameState.some(cell => cell !== null)}>
+                    {winner ? 'Reset Game' : 'Play'}
+                </Button>
             </Box>
             <Box sx={{ position: 'relative', width: gridSize, height: gridSize }}>
                 {renderWinningLine(winningLine?.type, winningLine?.index)}
@@ -211,7 +242,7 @@ const TicTacToe = () => {
                                     fontSize: { xs: '16px', sm: '24px' },
                                     padding: '0',
                                     minWidth: '0',
-                                    pointerEvents: value !== null || winner ? 'none' : 'auto',
+                                    pointerEvents: value !== null || winner || playerOneSize !== playerTwoSize ? 'none' : 'auto',
                                 }}
                             >
                                 {value}
@@ -231,7 +262,7 @@ const TicTacToe = () => {
                         variant="contained"
                         color="primary"
                         sx={{ marginTop: '10px' }}
-                        onClick={() => resetGame()}
+                        onClick={resetGame}
                     >
                         Reset Game
                     </Button>
