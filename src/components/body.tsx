@@ -6,8 +6,10 @@ const TicTacToe = () => {
     const [gameState, setGameState] = useState(Array(3 * 3).fill(null));
     const [isXTurn, setIsXTurn] = useState(true);
     const [winner, setWinner] = useState(null);
+    const [winningLine, setWinningLine] = useState<any>(null);
     const [playerOneSymbol, setPlayerOneSymbol] = useState('X');
     const [playerTwoSymbol, setPlayerTwoSymbol] = useState('O');
+    const [isPlayerOneFirst, setIsPlayerOneFirst] = useState(true);
 
     const handleSizeChange = (event: any) => {
         const newSize = event.target.value;
@@ -17,8 +19,11 @@ const TicTacToe = () => {
 
     const resetGame = (newSize = size) => {
         setGameState(Array(newSize * newSize).fill(null));
-        setIsXTurn(true);
         setWinner(null);
+        setWinningLine(null);
+        setIsPlayerOneFirst((prev) => !prev);
+        setIsXTurn(!isPlayerOneFirst);
+        toggleSymbols();
     };
 
     const toggleSymbols = () => {
@@ -26,7 +31,7 @@ const TicTacToe = () => {
         setPlayerTwoSymbol((prev) => (prev === 'X' ? 'O' : 'X'));
     };
 
-    const handleButtonClick = (index: any) => {
+    const handleButtonClick = (index: number) => {
         if (gameState[index] === null && !winner) {
             const newState = [...gameState];
             newState[index] = isXTurn ? playerOneSymbol : playerTwoSymbol;
@@ -38,9 +43,10 @@ const TicTacToe = () => {
                 gameArray.push(newState.slice(i * size, i * size + size));
             }
 
-            const result = checkWinner(gameArray);
+            const result: any = checkWinner(gameArray);
             if (result.winner) {
                 setWinner(result.winner);
+                setWinningLine(result.line);
             } else if (result.isDraw) {
                 setWinner('draw' as any);
             }
@@ -49,6 +55,7 @@ const TicTacToe = () => {
 
     const checkWinner = (tictactoeArray: any) => {
         let winner = null;
+        let winningLine = null;
         let isRowWon = true;
         let isColumnWon = true;
         let intersect1st = true;
@@ -72,12 +79,14 @@ const TicTacToe = () => {
                     isRowWon = tictactoeArray[index][index2] === tictactoeArray[index][index2 - 1] && isRowWon;
                     if (isRowWon && tictactoeArray.length - 1 === index2) {
                         winner = tictactoeArray[index][index2];
+                        winningLine = { type: 'row', index };
                         break;
                     }
 
                     isColumnWon = tictactoeArray[index2][index] === tictactoeArray[index2 - 1][index] && isColumnWon;
                     if (isColumnWon && tictactoeArray.length - 1 === index2) {
                         winner = tictactoeArray[index2][index];
+                        winningLine = { type: 'column', index };
                         break;
                     }
                 }
@@ -86,14 +95,80 @@ const TicTacToe = () => {
             const intersectPoint = Math.ceil((tictactoeArray.length - 1) / 2);
             if ((intersect1st || intersect2nd) && tictactoeArray.length - 1 === index) {
                 winner = tictactoeArray[intersectPoint][intersectPoint];
+                winningLine = { type: intersect1st ? 'diagonal1' : 'diagonal2' };
             }
             if (winner) break;
         }
 
-        return { winner, isDraw: !winner && isDraw };
+        return { winner, line: winningLine, isDraw: !winner && isDraw };
     };
 
     const gridSize = `${size * 100}px`;
+
+    const renderWinningLine = (type: any, index: any) => {
+        if (!type) return null;
+
+        const baseStyle = {
+            position: 'absolute',
+            backgroundColor: 'red',
+            transformOrigin: 'center',
+        };
+
+        switch (type) {
+            case 'row':
+                return (
+                    <Box
+                        sx={{
+                            ...baseStyle,
+                            width: '100%',
+                            height: '2px',
+                            top: `${index * (100 / size) + 50 / size}%`,
+                            left: '0',
+                        }}
+                    />
+                );
+            case 'column':
+                return (
+                    <Box
+                        sx={{
+                            ...baseStyle,
+                            width: '2px',
+                            height: '100%',
+                            top: '0',
+                            left: `${index * (100 / size) + 50 / size}%`,
+                        }}
+                    />
+                );
+            case 'diagonal1':
+                return (
+                    <Box
+                        sx={{
+                            ...baseStyle,
+                            width: '100%',
+                            height: '2px',
+                            top: '50%',
+                            left: '0',
+                            transform: 'rotate(45deg)',
+                        }}
+                    />
+                );
+            case 'diagonal2':
+                return (
+                    <Box
+                        sx={{
+                            ...baseStyle,
+                            width: '100%',
+                            height: '2px',
+                            top: '50%',
+                            left: '0',
+                            transform: 'rotate(-45deg)',
+                        }}
+                    />
+                );
+            default:
+                return null;
+        }
+    };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100vh', justifyContent: 'center', padding: 2 }}>
@@ -121,27 +196,30 @@ const TicTacToe = () => {
                     <MenuItem value={7}>7 x 7</MenuItem>
                 </Select>
             </Box>
-            <Grid container spacing={0} sx={{ width: gridSize, maxWidth: '100%', height: gridSize, maxHeight: '100%' }}>
-                {gameState.map((value, index) => (
-                    <Grid item xs={12 / size} key={index} sx={{ border: '1px solid black' }}>
-                        <Button
-                            variant="outlined"
-                            onClick={() => handleButtonClick(index)}
-                            sx={{
-                                width: '100%',
-                                height: '100%',
-                                aspectRatio: '1',
-                                fontSize: { xs: '16px', sm: '24px' },
-                                padding: '0',
-                                minWidth: '0',
-                                pointerEvents: value !== null || winner ? 'none' : 'auto',
-                            }}
-                        >
-                            {value}
-                        </Button>
-                    </Grid>
-                ))}
-            </Grid>
+            <Box sx={{ position: 'relative', width: gridSize, height: gridSize }}>
+                {renderWinningLine(winningLine?.type, winningLine?.index)}
+                <Grid container spacing={0} sx={{ width: '100%', height: '100%' }}>
+                    {gameState.map((value, index) => (
+                        <Grid item xs={12 / size} key={index} sx={{ border: '1px solid black' }}>
+                            <Button
+                                variant="outlined"
+                                onClick={() => handleButtonClick(index)}
+                                sx={{
+                                    width: '100%',
+                                    height: '100%',
+                                    aspectRatio: '1',
+                                    fontSize: { xs: '16px', sm: '24px' },
+                                    padding: '0',
+                                    minWidth: '0',
+                                    pointerEvents: value !== null || winner ? 'none' : 'auto',
+                                }}
+                            >
+                                {value}
+                            </Button>
+                        </Grid>
+                    ))}
+                </Grid>
+            </Box>
             {winner && (
                 <Box sx={{ marginTop: '20px', textAlign: 'center' }}>
                     <Typography variant="h6">
@@ -153,10 +231,7 @@ const TicTacToe = () => {
                         variant="contained"
                         color="primary"
                         sx={{ marginTop: '10px' }}
-                        onClick={() => {
-                            toggleSymbols();
-                            resetGame();
-                        }}
+                        onClick={() => resetGame()}
                     >
                         Reset Game
                     </Button>
