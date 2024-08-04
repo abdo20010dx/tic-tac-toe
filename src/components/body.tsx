@@ -1,77 +1,80 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Button, Grid, MenuItem, Select, Typography, Avatar } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../hooks/store';
+import { setGameState, setIsPlayerOneFirst, setIsXTurn, setMessage, setPlayerOneSize, setPlayerOneSymbol, setPlayerTwoSize, setPlayerTwoSymbol, setSize, setWinner, setWinningLine } from '../hooks/slices/ticTacToe';
+import userSingleton from '../utils/userSingleton';
 
 const TicTacToe = () => {
-    const [size, setSize] = useState(3);
-    const [playerOneSize, setPlayerOneSize] = useState(3);
-    const [playerTwoSize, setPlayerTwoSize] = useState(3);
-    const [gameState, setGameState] = useState(Array(3 * 3).fill(null));
-    const [isXTurn, setIsXTurn] = useState(true);
-    const [winner, setWinner] = useState(null);
-    const [winningLine, setWinningLine] = useState<any>(null);
-    const [playerOneSymbol, setPlayerOneSymbol] = useState('X');
-    const [playerTwoSymbol, setPlayerTwoSymbol] = useState('O');
-    const [isPlayerOneFirst, setIsPlayerOneFirst] = useState(true);
-    const [message, setMessage] = useState('');
+    const dispatch = useDispatch()
+    const reduxUserStore = useSelector((state: RootState) => state.user);
+    const reduxGameStore = useSelector((state: RootState) => state.ticTacToe);
+
+    //share and run disptaching between players through webRtc 
+    const shareDispatch = (setter: any) => {
+        userSingleton!.dataChannelRef!.current?.send(JSON.stringify({ setter }))
+        dispatch(setter)
+    }
+
 
     const handleSizeChange = (player: string, event: any) => {
         const newSize = event.target.value;
+        const playerNuame = reduxGameStore.playerNumber === 1 ? reduxUserStore.userName : reduxUserStore.friend.name
         if (player === 'one') {
-            setPlayerOneSize(newSize);
-            setMessage(`Player One asking to change game size to ${newSize}`);
+            shareDispatch(setPlayerOneSize(newSize));
+            shareDispatch(setMessage(`${playerNuame} asking to change game size to ${newSize}`));
         } else {
-            setPlayerTwoSize(newSize);
-            setMessage(`Player Two asking to change game size to ${newSize}`);
+            shareDispatch(setPlayerTwoSize(newSize));
+            shareDispatch(setMessage(`${playerNuame} asking to change game size to ${newSize}`));
         }
     };
 
     const resetGame = () => {
-        if (playerOneSize === playerTwoSize) {
-            setSize(playerOneSize);
-            setGameState(Array(playerOneSize * playerOneSize).fill(null));
-            setWinner(null);
-            setWinningLine(null);
-            setIsPlayerOneFirst((prev) => !prev);
-            setIsXTurn(!isPlayerOneFirst);
-            toggleSymbols();
-            setMessage('');
+        if (reduxGameStore.playerOneSize === reduxGameStore.playerTwoSize) {
+            shareDispatch(setSize(reduxGameStore.playerOneSize));
+            shareDispatch(setGameState(Array(reduxGameStore.playerOneSize * reduxGameStore.playerOneSize).fill(null)));
+            shareDispatch(setWinner(null));
+            shareDispatch(setWinningLine(null));
+            shareDispatch(setIsPlayerOneFirst(!reduxGameStore.isPlayerOneFirst));
+            shareDispatch(setIsXTurn(!reduxGameStore.isPlayerOneFirst));
+            toggleSymbols()
+            shareDispatch(setMessage(''));
         } else {
-            setMessage('Both players must select the same size to start the game.');
+            shareDispatch(setMessage('Both players must select the same size to start the game.'));
         }
     };
 
     const toggleSymbols = () => {
-        setPlayerOneSymbol((prev) => (prev === 'X' ? 'O' : 'X'));
-        setPlayerTwoSymbol((prev) => (prev === 'X' ? 'O' : 'X'));
+        shareDispatch(setPlayerOneSymbol((reduxGameStore.playerOneSymbol === 'X' ? 'O' : 'X')));
+        shareDispatch(setPlayerTwoSymbol((reduxGameStore.playerTwoSymbol === 'X' ? 'O' : 'X')));
     };
 
     const handleButtonClick = (index: number) => {
-        if (playerOneSize !== playerTwoSize) {
-            setMessage('Both players must select the same size to start the game.');
+        if (reduxGameStore.playerOneSize !== reduxGameStore.playerTwoSize) {
+            shareDispatch(setMessage('Both players must select the same size to start the game.'));
             return;
         }
 
-        if (gameState[index] === null && !winner) {
-            const newState = [...gameState];
-            newState[index] = isXTurn ? playerOneSymbol : playerTwoSymbol;
-            setGameState(newState);
-            setIsXTurn(!isXTurn);
+        if (reduxGameStore.gameState[index] === null && !reduxGameStore.winner) {
+            const newState = [...reduxGameStore.gameState];
+            newState[index] = reduxGameStore.isXTurn ? reduxGameStore.playerOneSymbol : reduxGameStore.playerTwoSymbol;
+            shareDispatch(setGameState(newState));
+            shareDispatch(setIsXTurn(!reduxGameStore.isXTurn));
 
             const gameArray = [];
-            for (let i = 0; i < size; i++) {
-                gameArray.push(newState.slice(i * size, i * size + size));
+            for (let i = 0; i < reduxGameStore.size; i++) {
+                gameArray.push(newState.slice(i * reduxGameStore.size, i * reduxGameStore.size + reduxGameStore.size));
             }
 
             const result: any = checkWinner(gameArray);
             if (result.winner) {
-                setWinner(result.winner);
-                setWinningLine(result.line);
+                shareDispatch(setWinner(result.winner));
+                shareDispatch(setWinningLine(result.line));
             } else if (result.isDraw) {
-                setWinner('draw' as any);
+                shareDispatch(setWinner('draw' as any));
             }
         }
     };
-
     const checkWinner = (tictactoeArray: any) => {
         let winner = null;
         let winningLine = null;
@@ -122,7 +125,7 @@ const TicTacToe = () => {
         return { winner, line: winningLine, isDraw: !winner && isDraw };
     };
 
-    const gridSize = `${size * 100}px`;
+    const gridSize = `${reduxGameStore.size * (reduxGameStore.size === 3 ? 100 : reduxGameStore.size === 5 ? 70 : 50)}px`;
 
     const renderWinningLine = (type: any, index: any) => {
         if (!type) return null;
@@ -141,7 +144,7 @@ const TicTacToe = () => {
                             ...baseStyle,
                             width: '100%',
                             height: '2px',
-                            top: `${index * (100 / size) + 50 / size}%`,
+                            top: `${index * (100 / reduxGameStore.size) + 50 / reduxGameStore.size}%`,
                             left: '0',
                         }}
                     />
@@ -154,7 +157,7 @@ const TicTacToe = () => {
                             width: '2px',
                             height: '100%',
                             top: '0',
-                            left: `${index * (100 / size) + 50 / size}%`,
+                            left: `${index * (100 / reduxGameStore.size) + 50 / reduxGameStore.size}%`,
                         }}
                     />
                 );
@@ -195,21 +198,32 @@ const TicTacToe = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Avatar sx={{ marginRight: 1 }}>P1</Avatar>
                     <Box>
-                        <Typography variant="body1">Player One</Typography>
-                        <Typography variant="h6">{playerOneSymbol}</Typography>
-                        <Select value={playerOneSize} onChange={(event) => handleSizeChange('one', event)} disabled={!!winner || gameState.some(cell => cell !== null)}>
+                        <Typography variant="body1">{reduxUserStore.userName}</Typography>
+                        <Typography variant="h6">{reduxGameStore.playerNumber === 1 ? reduxGameStore.playerOneSymbol : reduxGameStore.playerTwoSymbol}</Typography>
+                        <Select value={reduxGameStore.playerOneSize} onChange={(event) => handleSizeChange('one', event)} disabled={!!reduxGameStore.winner || reduxGameStore.gameState.some(cell => cell !== null)}>
                             <MenuItem value={3}>3 x 3</MenuItem>
                             <MenuItem value={5}>5 x 5</MenuItem>
                             <MenuItem value={7}>7 x 7</MenuItem>
                         </Select>
                     </Box>
+                </Box>
+                <Box sx={{ displayy: 'flex', alignItems: 'center' }}>
+                    <Button
+                        sx={{ marginLeft: 2, height: "50%", width: "50%", }}
+                        variant="contained"
+                        color="error"
+                        onClick={() => window.location.reload()}
+                    >
+                        Leave Game
+                    </Button>
+
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Avatar sx={{ marginRight: 1 }}>P2</Avatar>
                     <Box>
-                        <Typography variant="body1">Player Two</Typography>
-                        <Typography variant="h6">{playerTwoSymbol}</Typography>
-                        <Select value={playerTwoSize} onChange={(event) => handleSizeChange('two', event)} disabled={!!winner || gameState.some(cell => cell !== null)}>
+                        <Typography variant="body1">{reduxUserStore.friend.name}</Typography>
+                        <Typography variant="h6">{reduxGameStore.playerNumber === 2 ? reduxGameStore.playerOneSymbol : reduxGameStore.playerTwoSymbol}</Typography>
+                        <Select value={reduxGameStore.playerTwoSize} onChange={(event) => handleSizeChange('two', event)} disabled={!!reduxGameStore.winner || reduxGameStore.gameState.some(cell => cell !== null)}>
                             <MenuItem value={3}>3 x 3</MenuItem>
                             <MenuItem value={5}>5 x 5</MenuItem>
                             <MenuItem value={7}>7 x 7</MenuItem>
@@ -217,21 +231,21 @@ const TicTacToe = () => {
                     </Box>
                 </Box>
             </Box>
-            {message && (
+            {reduxGameStore.message && (
                 <Typography variant="body1" sx={{ marginBottom: '20px', color: 'red' }}>
-                    {message}
+                    {reduxGameStore.message}
                 </Typography>
             )}
             <Box sx={{ marginBottom: '20px' }}>
-                <Button variant="contained" onClick={resetGame} disabled={!!winner || playerOneSize !== playerTwoSize || gameState.some(cell => cell !== null)}>
-                    {winner ? 'Reset Game' : 'Play'}
+                <Button variant="contained" onClick={resetGame} disabled={!!reduxGameStore.winner || reduxGameStore.playerOneSize !== reduxGameStore.playerTwoSize || reduxGameStore.gameState.some(cell => cell !== null)}>
+                    {reduxGameStore.winner ? 'Reset Game' : 'Play'}
                 </Button>
             </Box>
             <Box sx={{ position: 'relative', width: gridSize, height: gridSize }}>
-                {renderWinningLine(winningLine?.type, winningLine?.index)}
+                {renderWinningLine(reduxGameStore.winningLine?.type, reduxGameStore.winningLine?.index)}
                 <Grid container spacing={0} sx={{ width: '100%', height: '100%' }}>
-                    {gameState.map((value, index) => (
-                        <Grid item xs={12 / size} key={index} sx={{ border: '1px solid black' }}>
+                    {reduxGameStore.gameState.map((value, index) => (
+                        <Grid item xs={12 / reduxGameStore.size} key={index} sx={{ border: '1px solid black' }}>
                             <Button
                                 variant="outlined"
                                 onClick={() => handleButtonClick(index)}
@@ -242,7 +256,7 @@ const TicTacToe = () => {
                                     fontSize: { xs: '16px', sm: '24px' },
                                     padding: '0',
                                     minWidth: '0',
-                                    pointerEvents: value !== null || winner || playerOneSize !== playerTwoSize ? 'none' : 'auto',
+                                    pointerEvents: value !== null || reduxGameStore.winner || reduxGameStore.playerOneSize !== reduxGameStore.playerTwoSize || reduxGameStore.isXTurn !== (reduxGameStore.playerNumber === 1) ? 'none' : 'auto',
                                 }}
                             >
                                 {value}
@@ -251,12 +265,12 @@ const TicTacToe = () => {
                     ))}
                 </Grid>
             </Box>
-            {winner && (
+            {reduxGameStore.winner && (
                 <Box sx={{ marginTop: '20px', textAlign: 'center' }}>
                     <Typography variant="h6">
-                        {winner === 'draw'
+                        {reduxGameStore.winner === 'draw'
                             ? 'Game is a draw!'
-                            : `Player ${winner === playerOneSymbol ? 'One' : 'Two'} wins!`}
+                            : `Player ${(reduxGameStore.winner === (reduxGameStore.playerNumber === 1 ? reduxGameStore.playerOneSymbol : reduxGameStore.playerTwoSymbol)) ? reduxUserStore.userName : reduxUserStore.friend.name} wins!`}
                     </Typography>
                     <Button
                         variant="contained"
