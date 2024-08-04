@@ -42,7 +42,26 @@ const WebRTCWithSocketIO = () => {
         // dispatch(setSearching(false))
     }
     const initializePeerConnection = () => {
-        userSingleton.peerConnection!.current = new RTCPeerConnection();
+        const config = {
+            iceServers: [
+                // STUN servers
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
+
+                // TURN server configuration (optional but recommended for better connectivity)
+                // Replace with your own TURN server credentials if you have them
+                {
+                    urls: 'turn:turn.example.com:3478',
+                    credential: 'yourTurnServerPassword',
+                    username: 'yourTurnServerUsername'
+                }
+            ]
+        };
+
+        userSingleton.peerConnection!.current = new RTCPeerConnection(config);
 
 
         userSingleton.peerConnection!.current.ondatachannel = (event) => {
@@ -51,7 +70,6 @@ const WebRTCWithSocketIO = () => {
 
             userSingleton.dataChannelRef!.current.onopen = () => {
                 dispatch(resetGame())
-                socket.close();
                 console.log('Data channel is open__________');
                 userSingleton.dataChannelRef!.current?.send(JSON.stringify({ friend: { name: reduxStoreRef.current?.userName, uuid: reduxStoreRef.current?.sender } }));
             };
@@ -59,6 +77,7 @@ const WebRTCWithSocketIO = () => {
             userSingleton.dataChannelRef!.current.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data?.friend && !reduxStoreRef.current?.friend?.name) {
+                    // socket.close();
                     dispatch(setFriend(data?.friend));
                     dispatch(setFriends(uniqueArrayByKey("uuid", [...reduxStore.friends, data.friend])))
                     userSingleton.dataChannelRef!.current?.send(JSON.stringify({ friend: { name: reduxStoreRef.current?.userName, uuid: reduxStoreRef.current?.sender } }));
@@ -171,7 +190,6 @@ const WebRTCWithSocketIO = () => {
             userSingleton.dataChannelRef!.current = userSingleton.peerConnection!.current!.createDataChannel('dataChannel');
             userSingleton.dataChannelRef!.current.onopen = () => {
                 dispatch(resetGame())
-                socket.close();
                 dispatch(setSearching(false))
 
                 console.log('Data channel is open');
@@ -179,6 +197,7 @@ const WebRTCWithSocketIO = () => {
             userSingleton.dataChannelRef!.current.onmessage = (event) => {
                 const parsedData = JSON.parse(event.data);
                 if (parsedData?.friend && !reduxStoreRef.current?.friend?.name) {
+                    // socket.close();
                     dispatch(setFriend(parsedData.friend))
                     dispatch(setFriends(uniqueArrayByKey("uuid", [...reduxStore.friends, parsedData.friend])))
                     const data = { name: reduxStoreRef.current.userName, uuid: reduxStoreRef.current.sender }
