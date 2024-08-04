@@ -10,7 +10,7 @@ import userSingleton from '../utils/userSingleton';
 import { resetGame, setPlayerNumber } from '../hooks/slices/ticTacToe';
 import { uniqueArrayByKey } from '../utils/helpers/uniqueArray';
 
-const socket = io('https://free-growing-sailfish.ngrok-free.app'); // Change the URL if necessary
+const socket = io('https://tic-tac-toe-back-dhvtrggb7a-lm.a.run.app/');
 
 const WebRTCWithSocketIO = () => {
     const dispatch = useDispatch();
